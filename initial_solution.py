@@ -135,7 +135,14 @@ class InitialSolutionBuilder:
     def _insert_into_truck_route(self, route: TruckRoute, point_id: int, position: int, load: int):
         """将取货点插入到卡车路线中"""
         route.sequence_of_points.insert(position, point_id)
-        route.visited_points_and_loads.append((point_id, load))
+
+        # ``visited_points_and_loads`` 需要与 ``sequence_of_points`` 保持顺序一致，
+        # 否则后续基于索引的操作（例如交换、移除等）会出现错位。
+        # ``sequence_of_points`` 包含了起点和终点的仓库节点，而 ``visited_points_and_loads``
+        # 仅记录实际的取货点，因此其插入位置比 ``sequence_of_points`` 对应位置少 1。
+        insert_idx = max(0, position - 1)
+        route.visited_points_and_loads.insert(insert_idx, (point_id, load))
+
         route.calculate_metrics(self.depot, self.pickup_points)
     
     def _assign_drones_to_remaining_demand(self, solution: Solution):
