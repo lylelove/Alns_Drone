@@ -33,7 +33,7 @@ WORSENING_PENALTY = 0.8  # 恶化惩罚因子
 
 
 # 动态参考值参数（基于初始解的比例）
-MAKESPAN_REFERENCE_RATIO = 0.3  # Makespan参考值
+MAKESPAN_REFERENCE_RATIO = 0.5  # Makespan参考值
 COST_REFERENCE_RATIO = 0.5  # 成本参考值
 
 # 预设优化场景（可选择性使用）

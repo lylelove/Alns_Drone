@@ -226,7 +226,7 @@ def run_complete_analysis():
     
     # 解析问题
     print("解析VRP问题文件...")
-    depot, pickup_points = parse_vrp_file('real_small.vrp')
+    depot, pickup_points = parse_vrp_file('real_2.vrp')
     print(f"成功解析：{len(pickup_points)} 个取货点，总需求 {sum(p.initial_demand for p in pickup_points.values())} 单位")
     
     # 创建初始解
