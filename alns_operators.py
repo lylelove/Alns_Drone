@@ -1339,6 +1339,9 @@ class OperatorWeightManager:
     """操作符权重管理器"""
     
     def __init__(self):
+        # ε-greedy探索与权重平滑
+        self.epsilon = getattr(config, 'OPERATOR_EPSILON', 0.0)
+        self.rho = getattr(config, 'WEIGHT_SMOOTHING_RHO', 0.0)
         self.destroy_weights = {
             'random_removal': config.INITIAL_OPERATOR_WEIGHT,
             'worst_removal': config.INITIAL_OPERATOR_WEIGHT,
@@ -1373,8 +1376,12 @@ class OperatorWeightManager:
     
     def _weighted_selection(self, weights: dict) -> str:
         """加权随机选择"""
+        # ε-greedy：以小概率随机探索，防止早熟收敛
+        if self.epsilon > 0 and random.random() < self.epsilon:
+            return random.choice(list(weights.keys()))
+
         total_weight = sum(weights.values())
-        if total_weight == 0:
+        if total_weight <= 0:
             return random.choice(list(weights.keys()))
         
         r = random.uniform(0, total_weight)
@@ -1411,4 +1418,9 @@ class OperatorWeightManager:
                 score = (stats[op]['improvements'] * config.IMPROVEMENT_REWARD +
                         stats[op]['neutral'] * config.NEUTRAL_REWARD +
                         stats[op]['worsening'] * config.WORSENING_PENALTY) / total_uses
-                weights[op] = max(0.1, score)  # 避免权重过小 
+                # 平滑更新，保留历史，以降低振荡与早熟
+                if self.rho and self.rho > 0:
+                    new_weight = (1 - self.rho) * weights[op] + self.rho * score
+                else:
+                    new_weight = score
+                weights[op] = max(0.1, new_weight)  # 避免权重过小 

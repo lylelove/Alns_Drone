@@ -61,14 +61,24 @@ class ALNSSolver:
             repair_op = self.weight_manager.select_repair_operator()
             
             # 确定破坏规模 (健壮化，兼容小规模实例)
-            # 1. 计算允许的最大移除点数 upper = min(MAX_DESTROY_SIZE, ⌊|P|/3⌋)，下限至少为 1
+            # 常规范围：upper = min(MAX_DESTROY_SIZE, ⌊|P|/3⌋)，下限至少为 1
             max_k = max(1, min(config.MAX_DESTROY_SIZE, max(1, len(self.pickup_points) // 3)))
-            # 2. 下界为 MIN_DESTROY_SIZE，但不能超过上界
             min_k = min(config.MIN_DESTROY_SIZE, max_k)
-            # 3. 若下界仍大于上界（极小实例），令两者相等，保证 randint 有效
             if min_k > max_k:
                 min_k = max_k
-            k = random.randint(min_k, max_k)
+
+            # 若长期无改进，触发轻量shake：一次性加大破坏规模并复温
+            if self.no_improvement_count >= getattr(config, 'STAGNATION_SHAKE_THRESHOLD', 10**9):
+                shake_k = int(len(self.pickup_points) * getattr(config, 'SHAKE_DESTROY_FRACTION', 0.5))
+                k = max(1, min(shake_k, len(self.pickup_points)))
+                # 复温到初温的一定比例，以便提升接受较差解的概率
+                target_T = getattr(config, 'REHEAT_FACTOR', 0.3) * config.INITIAL_TEMPERATURE
+                if self.temperature < target_T:
+                    self.temperature = target_T
+                    # 可选日志：提示触发shake
+                    # print(f"触发shake：无改进 {self.no_improvement_count} 次，加大破坏规模为 {k}，复温至 {self.temperature:.1f}")
+            else:
+                k = random.randint(min_k, max_k)
             
             # 应用破坏操作 (现在直接在candidate_solution上操作)
             destroyed_solution, removed_points = self._apply_destroy(candidate_solution, destroy_op, k)
@@ -95,6 +105,9 @@ class ALNSSolver:
             
             # 接受准则
             accept, result = self._acceptance_criterion(final_candidate_solution, current_solution)
+            # 前若干次迭代输出更详细的决策信息，便于诊断早熟收敛
+            if iteration < 10:
+                print(f"迭代 {iteration+1}: 接受={accept}, 结果={result}, 当前评估={current_score:.6f}, 候选评估={candidate_score:.6f}, 温度={self.temperature:.2f}")
             
             if accept:
                 current_solution = final_candidate_solution
@@ -139,9 +152,10 @@ class ALNSSolver:
             if (iteration + 1) % 100 == 0:
                 elapsed_time = time.time() - self.start_time
                 print(f"迭代 {iteration+1}/{self.max_iterations}, "
-                      f"当前评估值={current_score:.6f}, "
+                      f"当前评估值={current_solution.evaluate():.6f}, "
                       f"最佳评估值={best_solution.evaluate():.6f}, "
                       f"温度={self.temperature:.2f}, "
+                      f"无改进累计={self.no_improvement_count}, "
                       f"用时={elapsed_time:.1f}s")
         
         total_time = time.time() - self.start_time
@@ -229,11 +243,13 @@ class ALNSSolver:
                 if random.random() < probability:
                     return True, 'neutral'
             
-            # 检查 Makespan 优先强制接受（严格按照算法设计文档公式）
+            # 检查 Makespan 优先强制接受：当仅因时间更优而接受时，
+            # 在算子权重统计中标记为 'neutral'，避免误将其归类为全面“改进”。
+            # 这样可以减少算子权重过早向单一目标（时间）倾斜导致的早熟收敛。
             if (candidate.total_makespan < current.total_makespan and
                 candidate.total_operating_cost <= current.total_operating_cost *
                 (1 + config.MAX_ALLOWED_COST_INCREASE_FACTOR)):
-                return True, 'improvements'
+                return True, 'neutral'
             
             return False, 'worsening'
     

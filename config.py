@@ -14,7 +14,7 @@ DRONE_COST_PER_KM = 0.1  # 无人机运输成本 (元/公里)
 DRONE_STARTUP_COST = 20  # 无人机启动费用 (元)
 DRONE_RADIUS = 15  # 无人机运输半径 (km)
 DRONE_MAX_DISTANCE = 30  # 无人机单次飞行最大距离 (km)
-MAX_DRONES = 1  # 最大无人机数量
+MAX_DRONES = 5  # 最大无人机数量
 
 # ALNS算法参数
 INITIAL_TEMPERATURE = 2000.0  # 初始温度（降低用于测试）
@@ -29,6 +29,8 @@ WEIGHT_UPDATE_FREQUENCY = 50  # 权重更新频率（降低用于测试）
 IMPROVEMENT_REWARD = 1.2  # 改进奖励因子
 NEUTRAL_REWARD = 1.0  # 中性奖励因子
 WORSENING_PENALTY = 0.8  # 恶化惩罚因子
+OPERATOR_EPSILON = 0.08  # ε-greedy探索概率，防止算子过早固化
+WEIGHT_SMOOTHING_RHO = 0.2  # 权重平滑系数，降低抖动与早熟
 
 
 
@@ -92,6 +94,11 @@ RANDOM_SEED = 42
 GEO_SIMILARITY_WEIGHT = 0.7  # Shaw移除中地理相似度权重
 DEMAND_SIMILARITY_WEIGHT = 0.3  # Shaw移除中需求相似度权重
 NUMERICAL_STABILITY_EPSILON = 1e-6  # 数值稳定性保护常量
+
+# 停滞缓解（避免过快早熟收敛）
+STAGNATION_SHAKE_THRESHOLD = 200  # 超过该无改进次数后触发shake
+SHAKE_DESTROY_FRACTION = 0.5      # shake时一次破坏规模占比
+REHEAT_FACTOR = 0.3               # 复温比例（相对初温）
 
 # 可视化参数
 FIGURE_WIDTH = 10

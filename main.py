@@ -255,10 +255,10 @@ def run_complete_analysis():
     # 保存结果
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
-    # # 1. 保存JSON格式的详细数据
-    # print("保存解决方案数据...")
-    # json_file = os.path.join(results_dir, f'solution_data_{timestamp}.json')
-    # save_solution_details(final_solution, pickup_points, json_file)
+    # 1. 保存JSON格式的详细数据
+    print("保存解决方案数据...")
+    json_file = os.path.join(results_dir, f'solution_data_{timestamp}.json')
+    save_solution_details(final_solution, pickup_points, json_file)
     
     # 2. 保存文本报告
     print("生成详细报告...")
@@ -266,14 +266,14 @@ def run_complete_analysis():
     save_text_report(initial_solution, final_solution, pickup_points, solver_stats, report_file)
     
     # 3. 生成可视化图像
-    # print("生成可视化图像...")
+    print("生成可视化图像...")
     
     # 生成综合分析可视化
-    # figures = create_comprehensive_analysis(depot, pickup_points, final_solution,
-    #                                       "ALNS-Based Truck-Drone Collaborative VRP Solution",
-    #                                       f"solution_analysis_{timestamp}")
+    figures = create_comprehensive_analysis(depot, pickup_points, final_solution,
+                                          "ALNS-Based Truck-Drone Collaborative VRP Solution",
+                                          f"solution_analysis_{timestamp}")
     
-    # print(f"✅ 已生成 {len(figures)} 个详细分析图片")
+    print(f"✅ 已生成 {len(figures)} 个详细分析图片")
     
     # 4. 保存简化的结果摘要
     summary_file = os.path.join(results_dir, f'solution_summary_{timestamp}.txt')
@@ -307,9 +307,9 @@ def run_complete_analysis():
         f.write(f"使用无人机: {active_drones} 架\n")
     
     print(f"\n所有结果已保存到 '{results_dir}' 文件夹:")
-    # print(f"  - 解决方案数据: {os.path.basename(json_file)}")
-    # print(f"  - 详细报告: {os.path.basename(report_file)}")
-    # print(f"  - 可视化图像: solution_analysis_{timestamp}_main_solution.png")
+    print(f"  - 解决方案数据: {os.path.basename(json_file)}")
+    print(f"  - 详细报告: {os.path.basename(report_file)}")
+    print(f"  - 可视化图像: solution_analysis_{timestamp}_main_solution.png")
     print(f"  - 结果摘要: {os.path.basename(summary_file)}")
     
     return final_solution, solver_stats, pickup_points
