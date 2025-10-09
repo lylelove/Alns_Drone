@@ -226,7 +226,7 @@ def run_complete_analysis():
     
     # 解析问题
     print("解析VRP问题文件...")
-    depot, pickup_points = parse_vrp_file('real_2.vrp')
+    depot, pickup_points = parse_vrp_file('real_1.vrp')
     print(f"成功解析：{len(pickup_points)} 个取货点，总需求 {sum(p.initial_demand for p in pickup_points.values())} 单位")
     
     # 创建初始解
@@ -306,21 +306,57 @@ def run_complete_analysis():
         f.write(f"使用卡车: {active_trucks} 辆\n")
         f.write(f"使用无人机: {active_drones} 架\n")
     
-    print(f"\n所有结果已保存到 '{results_dir}' 文件夹:")
-    print(f"  - 解决方案数据: {os.path.basename(json_file)}")
-    print(f"  - 详细报告: {os.path.basename(report_file)}")
-    print(f"  - 可视化图像: solution_analysis_{timestamp}_main_solution.png")
-    print(f"  - 结果摘要: {os.path.basename(summary_file)}")
     
     return final_solution, solver_stats, pickup_points
 
+
+def run_complete_analysis_drone_number():
+
+    with open("se.txt", 'a', encoding='utf-8') as f:
+        for i in range(10):
+            random.seed(config.RANDOM_SEED+i)
+            depot, pickup_points = parse_vrp_file('real_1.vrp')
+            solver = ALNSSolver(depot, pickup_points)
+            final_solution = solver.solve()
+            active_trucks = sum(1 for r in final_solution.truck_routes if r.sequence_of_points and len(
+                r.sequence_of_points) > 2)
+            active_drones = sum(
+                1 for s in final_solution.drone_fleet_schedules if s.is_used)
+            f.write(f"使用卡车: {active_trucks} 辆\n")
+            f.write(f"使用无人机: {active_drones} 架\n")
+            f.write(f"  总成本: {final_solution.total_operating_cost:.2f} 元\n")
+            f.write(f"  Makespan: {final_solution.total_makespan:.2f} 小时\n")
+            f.write(f"-----------------------------------\n")
+
+
+def run_complete_analysis_drone_distance():
+
+    with open("d_distance.txt", 'a', encoding='utf-8') as f:
+        for i in range(10):
+            random.seed(config.RANDOM_SEED)
+            config.DRONE_RADIUS = config.DRONE_RADIUS + 1
+            config.DRONE_MAX_DISTANCE = config.DRONE_MAX_DISTANCE + 2
+            depot, pickup_points = parse_vrp_file('real_1.vrp')
+            for j in range(6):
+                solver = ALNSSolver(depot, pickup_points)
+                final_solution = solver.solve()
+                active_trucks = sum(1 for r in final_solution.truck_routes if r.sequence_of_points and len(
+                    r.sequence_of_points) > 2)
+                active_drones = sum(
+                    1 for s in final_solution.drone_fleet_schedules if s.is_used)
+                f.write(f"使用卡车: {active_trucks} 辆\n")
+                f.write(f"使用无人机: {active_drones} 架\n")
+                f.write(f"无人机路程：{config.DRONE_RADIUS}\n")
+                f.write(f"  总成本: {final_solution.total_operating_cost:.2f} 元\n")
+                f.write(f"  Makespan: {final_solution.total_makespan:.2f} 小时\n")
+                f.write(f"-----------------------------------\n")
+
 if __name__ == "__main__":
     try:
-        final_solution, stats, pickup_points = run_complete_analysis()
+        run_complete_analysis()
         print("\n✅ 完整分析执行成功！")
-        print(f"最终解评估值: {final_solution.evaluate():.6f}")
-        print(f"解决方案可行性: {'✓' if final_solution.is_feasible(pickup_points) else '✗'}")
     except Exception as e:
-        print(f"\n❌ 分析执行失败: {e}")
+        print(f"\n❌ 完整分析执行失败！")
+        print(f"错误信息: {e}")
         import traceback
         traceback.print_exc() 

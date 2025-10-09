@@ -9,12 +9,12 @@ TRUCK_STARTUP_COST = 100  # 卡车启动费用 (元)
 TRUCK_LOADING_TIME = 0.5  # 卡车装载时间 (小时)
 
 DRONE_CAPACITY = 5  # 无人机容量
-DRONE_SPEED = 60  # 无人机速度 (km/h) 
+DRONE_SPEED = 40  # 无人机速度 (km/h) 
 DRONE_COST_PER_KM = 0.1  # 无人机运输成本 (元/公里)
 DRONE_STARTUP_COST = 20  # 无人机启动费用 (元)
 DRONE_RADIUS = 15  # 无人机运输半径 (km)
 DRONE_MAX_DISTANCE = 30  # 无人机单次飞行最大距离 (km)
-MAX_DRONES = 5  # 最大无人机数量
+MAX_DRONES = 2  # 最大无人机数量
 
 # ALNS算法参数
 INITIAL_TEMPERATURE = 2000.0  # 初始温度（降低用于测试）

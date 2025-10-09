@@ -71,7 +71,7 @@ class VRPVisualizer:
         
         return transport_analysis
     
-    def create_comprehensive_visualization(self, solution: Solution, 
+    def create_comprehensive_visualization(self, solution: Solution,
                                          title: str = "ALNS-Based Truck-Drone Collaborative VRP Solution",
                                          save_prefix: str = "vrp_analysis"):
         """创建综合可视化分析，生成多个图片文件"""
@@ -89,6 +89,174 @@ class VRPVisualizer:
         self.save_figure(fig3, f"{save_prefix}_detailed_stats.png")
         
         return [fig1, fig2, fig3]
+    
+    def plot_individual_solution_overview(self, solution: Solution,
+                                        title: str = "Complete Solution Overview",
+                                        save_filename: str = "solution_overview.png"):
+        """绘制独立的完整解决方案概览图"""
+        fig, ax = plt.subplots(1, 1, figsize=(14, 10))
+        
+        self._plot_complete_solution(ax, solution)
+        ax.set_title(title, fontsize=16, fontweight='bold')
+        
+        # 调整图例位置，避免遮挡
+        ax.legend(bbox_to_anchor=(1.02, 1), loc='upper left', fontsize=10)
+        plt.tight_layout()
+        self.save_figure(fig, save_filename)
+        return fig
+    
+    def plot_individual_truck_routes(self, solution: Solution,
+                                   title: str = "Truck Routes",
+                                   save_filename: str = "truck_routes.png"):
+        """绘制独立的卡车路线图"""
+        fig, ax = plt.subplots(1, 1, figsize=(14, 10))
+        
+        self._plot_truck_routes_only(ax, solution)
+        ax.set_title(title, fontsize=16, fontweight='bold')
+        
+        # 调整图例位置，避免遮挡
+        ax.legend(bbox_to_anchor=(1.02, 1), loc='upper left', fontsize=10)
+        plt.tight_layout()
+        self.save_figure(fig, save_filename)
+        return fig
+    
+    def plot_individual_drone_missions(self, solution: Solution,
+                                     title: str = "Drone Missions",
+                                     save_filename: str = "drone_missions.png"):
+        """绘制独立的无人机任务图"""
+        fig, ax = plt.subplots(1, 1, figsize=(14, 10))
+        
+        self._plot_drone_missions_only(ax, solution)
+        ax.set_title(title, fontsize=16, fontweight='bold')
+        
+        # 调整图例位置，避免遮挡
+        ax.legend(bbox_to_anchor=(1.02, 1), loc='upper left', fontsize=10)
+        plt.tight_layout()
+        self.save_figure(fig, save_filename)
+        return fig
+    
+    def plot_individual_performance_metrics(self, solution: Solution,
+                                          title: str = "Performance Metrics",
+                                          save_filename: str = "performance_metrics.png"):
+        """绘制独立的性能指标图"""
+        fig, ax = plt.subplots(1, 1, figsize=(14, 12))
+        
+        self._plot_performance_metrics(ax, solution)
+        ax.set_title(title, fontsize=16, fontweight='bold')
+        
+        plt.tight_layout()
+        self.save_figure(fig, save_filename)
+        return fig
+    
+    def plot_individual_transport_mode_map(self, solution: Solution,
+                                         title: str = "Transportation Mode Distribution",
+                                         save_filename: str = "transport_mode_map.png"):
+        """绘制独立的运输方式分布地图"""
+        fig, ax = plt.subplots(1, 1, figsize=(14, 10))
+        
+        transport_analysis = self.analyze_transportation_modes(solution)
+        self._plot_transport_mode_map(ax, transport_analysis)
+        ax.set_title(title, fontsize=16, fontweight='bold')
+        
+        # 调整图例位置，避免遮挡
+        ax.legend(bbox_to_anchor=(1.02, 1), loc='upper left', fontsize=10)
+        plt.tight_layout()
+        self.save_figure(fig, save_filename)
+        return fig
+    
+    def plot_individual_transport_mode_pie(self, solution: Solution,
+                                         title: str = "Transportation Mode Statistics",
+                                         save_filename: str = "transport_mode_pie.png"):
+        """绘制独立的运输方式统计饼图"""
+        fig, ax = plt.subplots(1, 1, figsize=(12, 10))
+        
+        transport_analysis = self.analyze_transportation_modes(solution)
+        self._plot_transport_mode_pie(ax, transport_analysis)
+        ax.set_title(title, fontsize=16, fontweight='bold')
+        
+        plt.tight_layout()
+        self.save_figure(fig, save_filename)
+        return fig
+    
+    def plot_individual_demand_allocation(self, solution: Solution,
+                                        title: str = "Demand Allocation Analysis",
+                                        save_filename: str = "demand_allocation.png"):
+        """绘制独立的需求量分配分析图"""
+        fig, ax = plt.subplots(1, 1, figsize=(12, 8))
+        
+        transport_analysis = self.analyze_transportation_modes(solution)
+        self._plot_demand_allocation(ax, transport_analysis)
+        ax.set_title(title, fontsize=16, fontweight='bold')
+        
+        plt.tight_layout()
+        self.save_figure(fig, save_filename)
+        return fig
+    
+    def plot_individual_collaborative_details(self, solution: Solution,
+                                            title: str = "Collaborative Transportation Details",
+                                            save_filename: str = "collaborative_details.png"):
+        """绘制独立的协同运输详情图"""
+        fig, ax = plt.subplots(1, 1, figsize=(14, 10))
+        
+        transport_analysis = self.analyze_transportation_modes(solution)
+        self._plot_collaborative_details(ax, transport_analysis)
+        ax.set_title(title, fontsize=16, fontweight='bold')
+        
+        plt.tight_layout()
+        self.save_figure(fig, save_filename)
+        return fig
+    
+    def plot_individual_vehicle_utilization(self, solution: Solution,
+                                          title: str = "Vehicle Utilization Analysis",
+                                          save_filename: str = "vehicle_utilization.png"):
+        """绘制独立的车辆利用率分析图"""
+        fig, ax = plt.subplots(1, 1, figsize=(14, 10))
+        
+        self._plot_vehicle_utilization(ax, solution)
+        ax.set_title(title, fontsize=16, fontweight='bold')
+        
+        plt.tight_layout()
+        self.save_figure(fig, save_filename)
+        return fig
+    
+    def plot_individual_time_analysis(self, solution: Solution,
+                                    title: str = "Time Distribution Analysis",
+                                    save_filename: str = "time_analysis.png"):
+        """绘制独立的时间分析图"""
+        fig, ax = plt.subplots(1, 1, figsize=(12, 10))
+        
+        self._plot_time_analysis(ax, solution)
+        ax.set_title(title, fontsize=16, fontweight='bold')
+        
+        plt.tight_layout()
+        self.save_figure(fig, save_filename)
+        return fig
+    
+    def plot_individual_cost_breakdown(self, solution: Solution,
+                                     title: str = "Cost Structure Analysis",
+                                     save_filename: str = "cost_breakdown.png"):
+        """绘制独立的成本结构分析图"""
+        fig, ax = plt.subplots(1, 1, figsize=(12, 10))
+        
+        self._plot_cost_breakdown(ax, solution)
+        ax.set_title(title, fontsize=16, fontweight='bold')
+        
+        plt.tight_layout()
+        self.save_figure(fig, save_filename)
+        return fig
+    
+    def plot_individual_distance_efficiency(self, solution: Solution,
+                                          title: str = "Distance & Efficiency Analysis",
+                                          save_filename: str = "distance_efficiency.png"):
+        """绘制独立的距离和效率分析图"""
+        fig, ax = plt.subplots(1, 1, figsize=(12, 10))
+        
+        self._plot_distance_efficiency(ax, solution)
+        ax.set_title(title, fontsize=16, fontweight='bold')
+        
+        plt.tight_layout()
+        self.save_figure(fig, save_filename)
+        return fig
     
     def plot_transportation_analysis(self, solution: Solution):
         """绘制运输方式分析图"""
@@ -130,8 +298,8 @@ class VRPVisualizer:
                   edgecolor='black', linewidth=2, zorder=10)
         
         # 绘制无人机半径
-        drone_circle = plt.Circle((self.depot.x_coord, self.depot.y_coord), 
-                                config.DRONE_RADIUS, fill=False, color='blue', 
+        drone_circle = patches.Circle((self.depot.x_coord, self.depot.y_coord),
+                                config.DRONE_RADIUS, fill=False, color='blue',
                                 linestyle='--', alpha=0.3, linewidth=2)
         ax.add_patch(drone_circle)
         
@@ -427,14 +595,14 @@ class VRPVisualizer:
         
         # 绘制卡车路线
         active_truck_routes = [route for route in solution.truck_routes if route.sequence_of_points and len(route.sequence_of_points) > 2]
-        truck_colors = plt.cm.Set1(np.linspace(0, 1, max(len(active_truck_routes), 1)))
+        truck_colors = plt.get_cmap('Set1')(np.linspace(0, 1, max(len(active_truck_routes), 1)))
         
         for i, (route, color) in enumerate(zip(active_truck_routes, truck_colors)):
             self._draw_truck_route(ax, route, color, f'Truck {i+1}')
         
         # 绘制无人机半径
-        drone_circle = plt.Circle((self.depot.x_coord, self.depot.y_coord), 
-                                config.DRONE_RADIUS, fill=False, color='blue', 
+        drone_circle = patches.Circle((self.depot.x_coord, self.depot.y_coord),
+                                config.DRONE_RADIUS, fill=False, color='blue',
                                 linestyle='--', alpha=0.5, linewidth=2)
         ax.add_patch(drone_circle)
         
@@ -451,7 +619,7 @@ class VRPVisualizer:
                 bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.8, edgecolor='blue'))
         
         # 绘制无人机任务
-        drone_colors = plt.cm.Set2(np.linspace(0, 1, config.MAX_DRONES))
+        drone_colors = plt.get_cmap('Set2')(np.linspace(0, 1, config.MAX_DRONES))
         for schedule, color in zip(solution.drone_fleet_schedules, drone_colors):
             if schedule.is_used:
                 self._draw_drone_missions(ax, schedule, color, f'Drone {schedule.drone_id}')
@@ -466,7 +634,7 @@ class VRPVisualizer:
         
         # 绘制卡车路线 - 修复编号问题
         active_truck_routes = [route for route in solution.truck_routes if route.sequence_of_points and len(route.sequence_of_points) > 2]
-        truck_colors = plt.cm.Set1(np.linspace(0, 1, max(len(active_truck_routes), 1)))
+        truck_colors = plt.get_cmap('Set1')(np.linspace(0, 1, max(len(active_truck_routes), 1)))
         
         for i, (route, color) in enumerate(zip(active_truck_routes, truck_colors)):
             self._draw_truck_route(ax, route, color, f'Truck {i+1}')
@@ -480,13 +648,13 @@ class VRPVisualizer:
         self._draw_base_map(ax)
         
         # 绘制无人机半径
-        drone_circle = plt.Circle((self.depot.x_coord, self.depot.y_coord), 
-                                config.DRONE_RADIUS, fill=False, color='blue', 
+        drone_circle = patches.Circle((self.depot.x_coord, self.depot.y_coord),
+                                config.DRONE_RADIUS, fill=False, color='blue',
                                 linestyle='--', alpha=0.5, linewidth=2)
         ax.add_patch(drone_circle)
         
         # 绘制无人机任务
-        drone_colors = plt.cm.Set2(np.linspace(0, 1, config.MAX_DRONES))
+        drone_colors = plt.get_cmap('Set2')(np.linspace(0, 1, config.MAX_DRONES))
         for schedule, color in zip(solution.drone_fleet_schedules, drone_colors):
             if schedule.is_used:
                 self._draw_drone_missions(ax, schedule, color, f'Drone {schedule.drone_id}')
@@ -1031,8 +1199,62 @@ def create_comprehensive_analysis(depot: Depot, pickup_points: dict, solution: S
     # 打印生成的文件信息
     print(f"✅ 已生成 {len(figures)} 个分析图片:")
     print(f"   📊 {save_prefix}_main_solution.png - 主要解决方案图")
-    print(f"   🚛 {save_prefix}_transport_modes.png - 运输方式分析图") 
+    print(f"   🚛 {save_prefix}_transport_modes.png - 运输方式分析图")
     print(f"   📈 {save_prefix}_detailed_stats.png - 详细统计分析图")
+    
+    return figures
+
+def create_individual_visualizations(depot: Depot, pickup_points: dict, solution: Solution,
+                                   save_prefix: str = "individual_viz"):
+    """创建所有独立的可视化图片"""
+    visualizer = VRPVisualizer(depot, pickup_points)
+    
+    print("🎨 生成独立的可视化图片...")
+    
+    # 生成所有独立的图片
+    figures = []
+    
+    # 主要解决方案相关图片
+    figures.append(visualizer.plot_individual_solution_overview(
+        solution, "Complete Solution Overview", f"{save_prefix}_solution_overview.png"))
+    
+    figures.append(visualizer.plot_individual_truck_routes(
+        solution, "Truck Routes", f"{save_prefix}_truck_routes.png"))
+    
+    figures.append(visualizer.plot_individual_drone_missions(
+        solution, "Drone Missions", f"{save_prefix}_drone_missions.png"))
+    
+    figures.append(visualizer.plot_individual_performance_metrics(
+        solution, "Performance Metrics", f"{save_prefix}_performance_metrics.png"))
+    
+    # 运输方式分析相关图片
+    figures.append(visualizer.plot_individual_transport_mode_map(
+        solution, "Transportation Mode Distribution", f"{save_prefix}_transport_mode_map.png"))
+    
+    figures.append(visualizer.plot_individual_transport_mode_pie(
+        solution, "Transportation Mode Statistics", f"{save_prefix}_transport_mode_pie.png"))
+    
+    figures.append(visualizer.plot_individual_demand_allocation(
+        solution, "Demand Allocation Analysis", f"{save_prefix}_demand_allocation.png"))
+    
+    figures.append(visualizer.plot_individual_collaborative_details(
+        solution, "Collaborative Transportation Details", f"{save_prefix}_collaborative_details.png"))
+    
+    # 详细统计相关图片
+    figures.append(visualizer.plot_individual_vehicle_utilization(
+        solution, "Vehicle Utilization Analysis", f"{save_prefix}_vehicle_utilization.png"))
+    
+    figures.append(visualizer.plot_individual_time_analysis(
+        solution, "Time Distribution Analysis", f"{save_prefix}_time_analysis.png"))
+    
+    figures.append(visualizer.plot_individual_cost_breakdown(
+        solution, "Cost Structure Analysis", f"{save_prefix}_cost_breakdown.png"))
+    
+    figures.append(visualizer.plot_individual_distance_efficiency(
+        solution, "Distance & Efficiency Analysis", f"{save_prefix}_distance_efficiency.png"))
+    
+    # 打印生成的文件信息
+    print(f"✅ 已生成 {len(figures)} 个独立的可视化图片")
     
     return figures
 
@@ -1045,8 +1267,15 @@ if __name__ == "__main__":
     random.seed(config.RANDOM_SEED)
     
     # 解析问题并求解
-    depot, pickup_points = parse_vrp_file("real.vrp")
-    solution = solve_vrp_with_alns(depot, pickup_points)
-    
-    # 可视化结果
-    visualize_solution(depot, pickup_points, solution) 
+    parsed_result = parse_vrp_file("real.vrp")
+    if parsed_result is not None:
+        depot, pickup_points = parsed_result
+        if depot is not None:
+            solution = solve_vrp_with_alns(depot, pickup_points)
+            
+            # 可视化结果
+            visualize_solution(depot, pickup_points, solution)
+        else:
+            print("无法解析到有效的仓库信息")
+    else:
+        print("无法解析VRP文件")
