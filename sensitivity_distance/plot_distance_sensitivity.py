@@ -2,6 +2,7 @@
 from pathlib import Path
 import re
 from collections import defaultdict
+import numpy as np
 import matplotlib.pyplot as plt
 
 
@@ -67,37 +68,73 @@ def build_series(records):
     return cost_series, makespan_series
 
 
-def plot_boxplots(cost_series, makespan_series):
-    # 将无人机路程排序以保持箱型图顺序一致
+def plot_line_charts(cost_series, makespan_series):
+    """绘制折线图展示成本和makespan随无人机范围的变化趋势"""
+    # 将无人机路程排序
     distances = sorted(cost_series)
-    cost_data = [cost_series[distance] for distance in distances]
-    makespan_data = [makespan_series[distance] for distance in distances]
-    
-    fig, axes = plt.subplots(1, 2, figsize=(14, 6), sharex=True)
-    
-    axes[0].boxplot(cost_data, tick_labels=distances, patch_artist=True)
-    axes[0].set_title('Cost Sensitivity by Drone Range')
-    axes[0].set_xlabel('Drone Range')
-    axes[0].set_ylabel('Total Cost (CNY)')
-    
-    axes[1].boxplot(makespan_data, tick_labels=distances, patch_artist=True)
-    axes[1].set_title('Makespan Sensitivity by Drone Range')
-    axes[1].set_xlabel('Drone Range')
-    axes[1].set_ylabel('Makespan (hours)')
-    
-    fig.tight_layout(rect=(0, 0.03, 1, 0.95))
+
+    # 计算每个距离下的均值和标准差
+    cost_means = [np.mean(cost_series[d]) for d in distances]
+    cost_stds = [np.std(cost_series[d]) for d in distances]
+    makespan_means = [np.mean(makespan_series[d]) for d in distances]
+    makespan_stds = [np.std(makespan_series[d]) for d in distances]
+
+    # 创建子图
+    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+
+    # 绘制成本趋势图
+    axes[0].plot(distances, cost_means, 'o-', linewidth=2, markersize=8,
+                 color='#2E86AB', label='Mean Cost')
+    axes[0].fill_between(distances,
+                         np.array(cost_means) - np.array(cost_stds),
+                         np.array(cost_means) + np.array(cost_stds),
+                         alpha=0.3, color='#2E86AB', label='±1 Std Dev')
+    axes[0].set_title('Cost Sensitivity by Drone Range', fontsize=14, fontweight='bold')
+    axes[0].set_xlabel('Drone Range (km)', fontsize=12)
+    axes[0].set_ylabel('Total Cost (CNY)', fontsize=12)
+    axes[0].grid(True, alpha=0.3, linestyle='--')
+    axes[0].legend(loc='best')
+
+    # 标注最优点(如果15km在数据中)
+    if 15 in distances:
+        idx = distances.index(15)
+        axes[0].axvline(x=15, color='red', linestyle='--', alpha=0.5, linewidth=1.5)
+        axes[0].scatter([15], [cost_means[idx]], color='red', s=150, zorder=5,
+                       marker='*', edgecolors='darkred', linewidths=1.5)
+
+    # 绘制makespan趋势图
+    axes[1].plot(distances, makespan_means, 's-', linewidth=2, markersize=8,
+                 color='#A23B72', label='Mean Makespan')
+    axes[1].fill_between(distances,
+                         np.array(makespan_means) - np.array(makespan_stds),
+                         np.array(makespan_means) + np.array(makespan_stds),
+                         alpha=0.3, color='#A23B72', label='±1 Std Dev')
+    axes[1].set_title('Makespan Sensitivity by Drone Range', fontsize=14, fontweight='bold')
+    axes[1].set_xlabel('Drone Range (km)', fontsize=12)
+    axes[1].set_ylabel('Makespan (hours)', fontsize=12)
+    axes[1].grid(True, alpha=0.3, linestyle='--')
+    axes[1].legend(loc='best')
+
+    # 标注最优点(如果15km在数据中)
+    if 15 in distances:
+        idx = distances.index(15)
+        axes[1].axvline(x=15, color='red', linestyle='--', alpha=0.5, linewidth=1.5)
+        axes[1].scatter([15], [makespan_means[idx]], color='red', s=150, zorder=5,
+                       marker='*', edgecolors='darkred', linewidths=1.5)
+
+    fig.tight_layout()
     plt.savefig('distance_sensitivity_analysis.png', dpi=300, bbox_inches='tight')
     plt.show()
 
 
 def main():
-    # 解析文本并绘制箱型图
+    # 解析文本并绘制折线图
     records = parse_sensitivity(DATA_FILE)
     if not records:
         raise ValueError('No records were parsed from d_distance.txt')
-    
+
     cost_series, makespan_series = build_series(records)
-    plot_boxplots(cost_series, makespan_series)
+    plot_line_charts(cost_series, makespan_series)
 
 
 if __name__ == '__main__':

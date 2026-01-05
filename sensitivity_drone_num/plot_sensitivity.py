@@ -1,11 +1,19 @@
+
 # -*- coding: utf-8 -*-
 from pathlib import Path
 import re
 from collections import defaultdict
 import matplotlib.pyplot as plt
+import numpy as np
 
 
-DATA_FILE = Path('se.txt')
+DATA_FILE = Path('d_num.txt')
+
+# 设置中文字体和全局样式
+plt.rcParams['font.sans-serif'] = ['SimHei', 'DejaVu Sans', 'Arial Unicode MS']  # 用来正常显示中文标签
+plt.rcParams['axes.unicode_minus'] = False  # 用来正常显示负号
+plt.rcParams['figure.facecolor'] = 'white'
+plt.rcParams['axes.facecolor'] = '#f8f9fa'
 
 
 def parse_sensitivity(file_path: Path):
@@ -67,20 +75,60 @@ def plot_boxplots(cost_series, makespan_series):
     cost_data = [cost_series[count] for count in drone_counts]
     makespan_data = [makespan_series[count] for count in drone_counts]
 
-    fig, axes = plt.subplots(1, 2, figsize=(14, 6), sharex=True)
-
-    axes[0].boxplot(cost_data, tick_labels=drone_counts, patch_artist=True)
-    axes[0].set_title('Cost Sensitivity by Drone Count')
-    axes[0].set_xlabel('Number of Drones')
-    axes[0].set_ylabel('Total Cost (CNY)')
-
-    axes[1].boxplot(makespan_data, tick_labels=drone_counts, patch_artist=True)
-    axes[1].set_title('Makespan Sensitivity by Drone Count')
-    axes[1].set_xlabel('Number of Drones')
-    axes[1].set_ylabel('Makespan (hours)')
-
+    # 创建更美观的图形
+    fig, axes = plt.subplots(1, 2, figsize=(16, 7), sharex=True)
+    fig.suptitle('无人机数量敏感性分析', fontsize=18, fontweight='bold', y=0.98)
+    
+    # 定义颜色方案
+    colors = ['#3498db', '#2ecc71', '#f39c12', '#e74c3c', '#9b59b6', '#1abc9c', '#34495e', '#f1c40f']
+    
+    # 绘制成本箱型图
+    bp_cost = axes[0].boxplot(cost_data, tick_labels=drone_counts, patch_artist=True, 
+                             boxprops=dict(linewidth=1.5), 
+                             whiskerprops=dict(linewidth=1.5, linestyle='--'),
+                             capprops=dict(linewidth=1.5),
+                             medianprops=dict(linewidth=2, color='black'))
+    
+    # 为成本箱型图添加颜色
+    for patch, color in zip(bp_cost['boxes'], colors[:len(drone_counts)]):
+        patch.set_facecolor(color)
+        patch.set_alpha(0.7)
+    
+    axes[0].set_title('成本敏感性分析', fontsize=14, fontweight='bold', pad=15)
+    axes[0].set_xlabel('无人机数量', fontsize=12, fontweight='bold')
+    axes[0].set_ylabel('总成本 (元)', fontsize=12, fontweight='bold')
+    axes[0].grid(True, linestyle='--', alpha=0.7, axis='y')
+    axes[0].tick_params(axis='both', which='major', labelsize=10)
+    
+    # 绘制时间箱型图
+    bp_makespan = axes[1].boxplot(makespan_data, tick_labels=drone_counts, patch_artist=True,
+                                 boxprops=dict(linewidth=1.5),
+                                 whiskerprops=dict(linewidth=1.5, linestyle='--'),
+                                 capprops=dict(linewidth=1.5),
+                                 medianprops=dict(linewidth=2, color='black'))
+    
+    # 为时间箱型图添加颜色
+    for patch, color in zip(bp_makespan['boxes'], colors[:len(drone_counts)]):
+        patch.set_facecolor(color)
+        patch.set_alpha(0.7)
+    
+    axes[1].set_title('完成时间敏感性分析', fontsize=14, fontweight='bold', pad=15)
+    axes[1].set_xlabel('无人机数量', fontsize=12, fontweight='bold')
+    axes[1].set_ylabel('完成时间 (小时)', fontsize=12, fontweight='bold')
+    axes[1].grid(True, linestyle='--', alpha=0.7, axis='y')
+    axes[1].tick_params(axis='both', which='major', labelsize=10)
+    
+    # 添加数据点数量标注
+    for i, (ax, data) in enumerate(zip(axes, [cost_data, makespan_data])):
+        for j, count in enumerate(drone_counts):
+            ax.text(j+1, ax.get_ylim()[1]*0.95, f'n={len(data[j])}',
+                   ha='center', va='top', fontsize=9,
+                   bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.7))
+    
+    # 调整布局
     fig.tight_layout(rect=(0, 0.03, 1, 0.95))
-    plt.savefig('sensitivity_analysis.png', dpi=300, bbox_inches='tight')
+    plt.savefig('sensitivity_analysis.png', dpi=300, bbox_inches='tight',
+                facecolor=fig.get_facecolor(), edgecolor='none')
     plt.show()
 
 
