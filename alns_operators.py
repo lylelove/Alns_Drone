@@ -115,10 +115,22 @@ class ALNSOperators:
         
         if not all_routes:
             return solution, []
-        
-        k = min(k, len(all_routes))
-        routes_to_remove = random.sample(all_routes, k)
-        
+
+        # 以“移除约k个取货点”为预算来选择路线，
+        # 避免把k误当作路线数量而一次性移除几乎所有路线
+        random.shuffle(all_routes)
+        routes_to_remove = []
+        planned_points = 0
+        for route_type, route_obj in all_routes:
+            if routes_to_remove and planned_points >= k:
+                break
+            if route_type == 'truck':
+                planned_points += len(route_obj.visited_points_and_loads)
+            else:
+                planned_points += sum(len(trip.visited_points_and_loads)
+                                      for trip in route_obj.list_of_drone_trips)
+            routes_to_remove.append((route_type, route_obj))
+
         for route_type, route_obj in routes_to_remove:
             if route_type == 'truck':
                 for point_id, _ in route_obj.visited_points_and_loads:
@@ -725,25 +737,25 @@ class ALNSOperators:
         """执行无人机全量分配"""
         # 使用剩余需求而非初始需求
         remaining_demand = point.remaining_demand
-        
+
         if remaining_demand <= 0:
             return
-        
-        best_drone_schedule = min(solution.drone_fleet_schedules,
-                                key=lambda s: s.total_drone_time)
-        
+
         while remaining_demand > 0:
+            # 每次飞行都选择当前累计时间最少的无人机，
+            # 避免全部堆到同一架无人机上抬高makespan
+            best_drone_schedule = min(solution.drone_fleet_schedules,
+                                      key=lambda s: s.total_drone_time)
             load_per_trip = min(remaining_demand, config.DRONE_CAPACITY)
-            
+
             trip = DroneTrip(best_drone_schedule.drone_id)
             trip.sequence_of_points = ['depot', point.id, 'depot']
             trip.visited_points_and_loads = [(point.id, load_per_trip)]
             trip.calculate_metrics(self.depot, self.pickup_points)
-            
+
             best_drone_schedule.list_of_drone_trips.append(trip)
+            best_drone_schedule.calculate_metrics()
             remaining_demand -= load_per_trip
-        
-        best_drone_schedule.calculate_metrics()
     
     def _execute_split_assignment(self, solution: Solution, point: PickupPoint, split_plan: dict):
         """执行协同拆分分配"""
@@ -760,15 +772,23 @@ class ALNSOperators:
         """插入部分卡车载货"""
         best_insertion = None
         best_cost = float('inf')
-        
+
         for route in solution.truck_routes:
             insertion = self._evaluate_truck_insertion(route, point, load)
             if insertion and insertion['cost_increase'] < best_cost:
                 best_insertion = insertion
                 best_cost = insertion['cost_increase']
-        
+
         if best_insertion:
             self._execute_insertion(solution, best_insertion)
+        else:
+            # 无现有路线可容纳时，创建新卡车路线兜底，
+            # 否则该部分载货会被静默丢弃，导致解不可行
+            new_route = TruckRoute(len(solution.truck_routes) + 1)
+            new_route.sequence_of_points = ['depot', point.id, 'depot']
+            new_route.visited_points_and_loads = [(point.id, min(load, config.TRUCK_CAPACITY))]
+            new_route.calculate_metrics(self.depot, self.pickup_points)
+            solution.truck_routes.append(new_route)
     
     def _insert_partial_drone_load(self, solution: Solution, point: PickupPoint, load: int):
         """插入部分无人机载货"""
@@ -998,10 +1018,22 @@ class ALNSOperators:
             route.calculate_metrics(self.depot, self.pickup_points)
         
         for schedule in solution.drone_fleet_schedules:
-            schedule.list_of_drone_trips = [
-                trip for trip in schedule.list_of_drone_trips 
-                if not any(pid == point_id for pid, _ in trip.visited_points_and_loads)
-            ]
+            # 只把该点从飞行任务中剔除，而不是整条任务删除：
+            # 多点飞行任务中可能还服务其他取货点，整条删除会
+            # 静默丢弃其他点的载货量，导致解不可行
+            trips_to_keep = []
+            for trip in schedule.list_of_drone_trips:
+                if any(pid == point_id for pid, _ in trip.visited_points_and_loads):
+                    trip.sequence_of_points = [p for p in trip.sequence_of_points
+                                               if p == 'depot' or p != point_id]
+                    trip.visited_points_and_loads = [(pid, load) for pid, load in trip.visited_points_and_loads
+                                                     if pid != point_id]
+                    if trip.visited_points_and_loads:
+                        trip.calculate_metrics(self.depot, self.pickup_points)
+                        trips_to_keep.append(trip)
+                else:
+                    trips_to_keep.append(trip)
+            schedule.list_of_drone_trips = trips_to_keep
             schedule.calculate_metrics()
         
         if new_drone_load > 0:
@@ -1136,13 +1168,15 @@ class ALNSOperators:
             
             iteration_count += 1
         
-        # 处理剩余需求
-        if remaining_demand > 0:
+        # 处理剩余需求：按卡车容量拆分为多条新路线，避免单条路线超载
+        while remaining_demand > 0:
+            load_to_take = min(remaining_demand, config.TRUCK_CAPACITY)
             new_route = TruckRoute(len(solution.truck_routes) + 1)
             new_route.sequence_of_points = ['depot', point.id, 'depot']
-            new_route.visited_points_and_loads = [(point.id, remaining_demand)]
+            new_route.visited_points_and_loads = [(point.id, load_to_take)]
             new_route.calculate_metrics(self.depot, self.pickup_points)
             solution.truck_routes.append(new_route)
+            remaining_demand -= load_to_take
 
     def _execute_insertion(self, solution: Solution, insertion: dict) -> int:
         """执行插入操作，返回实际分配的载货量"""
@@ -1151,27 +1185,26 @@ class ALNSOperators:
             position = insertion['position']
             load = insertion['load']
             point_id = insertion['point_id']
-            
-            distance_delta = insertion['distance_delta']
-            time_delta = insertion['time_delta']
-            cost_increase = insertion['cost_increase']
-            
+
             point_already_in_route = False
             for i, (existing_point_id, existing_load) in enumerate(route.visited_points_and_loads):
                 if existing_point_id == point_id:
                     route.visited_points_and_loads[i] = (point_id, existing_load + load)
                     point_already_in_route = True
                     break
-            
+
             if not point_already_in_route:
                 if position < len(route.sequence_of_points):
                     route.sequence_of_points.insert(position, point_id)
                 else:
                     route.sequence_of_points.insert(-1, point_id)
                 route.visited_points_and_loads.append((point_id, load))
-            
-            # 修复：无论点是否已在路线中，都要更新增量指标
-            route.update_metrics_incrementally(distance_delta, cost_increase, time_delta, load)
+
+            # 全量重算路线指标：
+            # 若点已在路线中，序列并未改变，套用评估时的距离/时间增量会导致
+            # total_distance/total_time 虚增（含额外装载时间），使指标漂移。
+            # 全量重算保证与实际路线严格一致。
+            route.calculate_metrics(self.depot, self.pickup_points)
 
             return load
             

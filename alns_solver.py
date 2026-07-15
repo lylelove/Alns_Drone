@@ -17,15 +17,19 @@ class ALNSSolver:
         self.weight_manager = OperatorWeightManager()
         
         # 算法参数
+        # 初始温度将在solve()中根据目标函数的实际尺度自动校准，
+        # 避免固定温度与归一化评估值（量级约为1）不匹配导致SA退化
+        self.initial_temperature = config.INITIAL_TEMPERATURE
         self.temperature = config.INITIAL_TEMPERATURE
         self.min_temperature = config.MIN_TEMPERATURE
         self.cooling_rate = config.COOLING_RATE
         self.max_iterations = config.MAX_ITERATIONS
         self.max_no_improvement = config.MAX_NO_IMPROVEMENT
-        
+
         # 统计信息
         self.iteration_count = 0
         self.no_improvement_count = 0
+        self.no_improvement_since_shake = 0  # 距上次shake后的无改进次数
         self.start_time = None
         
     def solve(self) -> Solution:
@@ -44,8 +48,24 @@ class ALNSSolver:
         )
         
         best_solution = self._copy_solution(current_solution)
-        
-        print(f"初始解评估值: {current_solution.evaluate():.6f}")
+
+        # 3. 根据初始解的评估值校准模拟退火温度尺度：
+        # 使初始阶段一个差 START_ACCEPT_WORSE_RATIO（默认5%）的解
+        # 以约50%概率被接受。归一化目标函数量级约为1，
+        # 固定的大温度（如2000）会使exp(-δ/T)≈1，SA退化为随机游走。
+        initial_score = current_solution.evaluate()
+        worse_ratio = getattr(config, 'START_ACCEPT_WORSE_RATIO', 0.05)
+        calibrated_T = max(
+            (initial_score * worse_ratio) / math.log(2),
+            config.NUMERICAL_STABILITY_EPSILON
+        )
+        self.initial_temperature = calibrated_T
+        self.temperature = calibrated_T
+        # 最小温度同样按比例缩放，保持退火曲线形状
+        self.min_temperature = calibrated_T * (config.MIN_TEMPERATURE / config.INITIAL_TEMPERATURE)
+        print(f"校准初始温度: {self.temperature:.6f} (初始评估值: {initial_score:.6f})")
+
+        print(f"初始解评估值: {initial_score:.6f}")
         print(f"初始Makespan: {current_solution.total_makespan:.2f}小时")
         print(f"初始成本: {current_solution.total_operating_cost:.2f}元")
         
@@ -67,16 +87,19 @@ class ALNSSolver:
             if min_k > max_k:
                 min_k = max_k
 
-            # 若长期无改进，触发轻量shake：一次性加大破坏规模并复温
-            if self.no_improvement_count >= getattr(config, 'STAGNATION_SHAKE_THRESHOLD', 10**9):
+            # 若长期无改进，触发轻量shake：一次性加大破坏规模并复温。
+            # 使用独立计数器并在触发后重置，避免阈值一旦越过后
+            # 每次迭代都执行大规模破坏+复温（导致搜索退化为重启循环）。
+            if self.no_improvement_since_shake >= getattr(config, 'STAGNATION_SHAKE_THRESHOLD', 10**9):
                 shake_k = int(len(self.pickup_points) * getattr(config, 'SHAKE_DESTROY_FRACTION', 0.5))
                 k = max(1, min(shake_k, len(self.pickup_points)))
-                # 复温到初温的一定比例，以便提升接受较差解的概率
-                target_T = getattr(config, 'REHEAT_FACTOR', 0.3) * config.INITIAL_TEMPERATURE
+                # 复温到（校准后）初温的一定比例，以便提升接受较差解的概率
+                target_T = getattr(config, 'REHEAT_FACTOR', 0.3) * self.initial_temperature
                 if self.temperature < target_T:
                     self.temperature = target_T
-                    # 可选日志：提示触发shake
-                    # print(f"触发shake：无改进 {self.no_improvement_count} 次，加大破坏规模为 {k}，复温至 {self.temperature:.1f}")
+                self.no_improvement_since_shake = 0  # 重置，等待下一次停滞
+                # 可选日志：提示触发shake
+                # print(f"触发shake：加大破坏规模为 {k}，复温至 {self.temperature:.6f}")
             else:
                 k = random.randint(min_k, max_k)
             
@@ -114,13 +137,16 @@ class ALNSSolver:
                 if candidate_score < best_solution.evaluate():
                     best_solution = self._copy_solution(final_candidate_solution)
                     self.no_improvement_count = 0
+                    self.no_improvement_since_shake = 0
                     print(f"迭代 {iteration+1}: 找到更好解! 评估值={candidate_score:.6f}, "
                           f"Makespan={final_candidate_solution.total_makespan:.2f}h, "
                           f"成本={final_candidate_solution.total_operating_cost:.2f}元")
                 else:
                     self.no_improvement_count += 1
+                    self.no_improvement_since_shake += 1
             else:
                 self.no_improvement_count += 1
+                self.no_improvement_since_shake += 1
             
             # 更新操作符性能
             self.weight_manager.update_operator_performance(destroy_op, repair_op, result)

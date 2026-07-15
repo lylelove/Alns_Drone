@@ -17,11 +17,12 @@ DRONE_MAX_DISTANCE = 30  # 无人机单次飞行最大距离 (km)
 MAX_DRONES = 2  # 最大无人机数量
 
 # ALNS算法参数
-INITIAL_TEMPERATURE = 2000.0  # 初始温度（降低用于测试）
-MIN_TEMPERATURE = 1.0  # 最小温度
+INITIAL_TEMPERATURE = 2000.0  # 初始温度（仅作为名义值；求解时会按目标函数尺度自动校准）
+MIN_TEMPERATURE = 1.0  # 最小温度（名义值，与初始温度按相同比例缩放）
 COOLING_RATE = 0.997  # 冷却率
 MAX_ITERATIONS = 2000  # 最大迭代次数（降低用于测试）
 MAX_NO_IMPROVEMENT = 2000  # 最大无改进迭代次数（降低用于测试）
+START_ACCEPT_WORSE_RATIO = 0.05  # 温度校准：初始阶段差5%的解以约50%概率被接受
 
 # 操作符权重相关
 INITIAL_OPERATOR_WEIGHT = 1.0  # 初始操作符权重
